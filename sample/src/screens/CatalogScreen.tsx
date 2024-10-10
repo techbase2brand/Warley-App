@@ -61,8 +61,8 @@ function CatalogScreen({ navigation }: Props) {
       setCollectionsFetched(true);
     };
     fetchInitialData()
-    const CollectionId = ("gid://shopify/Collection/331435278489");
-    const CollectionName = ("Speakers");
+    const CollectionId = ("gid://shopify/Collection/632394318170");
+    const CollectionName = ("Home");
     onPressCollection(CollectionId, CollectionName)
     setSelectedCollectionId(CollectionId)
 
@@ -241,24 +241,32 @@ function CatalogScreen({ navigation }: Props) {
       <Header
         navigation={navigation}
         backIcon={true}
-        text={collectionTitle}
+        text={"Categories"}
+        // text={collectionTitle}
+        textinput={true}
       />
+      <View style={{ width: "100%", height: 5, backgroundColor: whiteColor }}></View>
+
       <View style={[styles.container]}>
-        <View style={[styles.productCollectionBox, { backgroundColor: isDarkMode ? themecolors.grayColor : lightGrayOpacityColor }]}>
+        <View style={[styles.productCollectionBox, { backgroundColor: isDarkMode ? themecolors.grayColor : "transparent" }]}>
           <FlatList
-            data={shopifyCollection}
+            data={collectionData?.collections.edges}
             renderItem={({ item }) => (
-              <Pressable onPress={() => onPressCollection(item?.id, item?.title)} style={[alignItemsCenter, borderRadius10, { flexDirection: 'row', paddingHorizontal: selectedCollectionId === item?.id ? 0 : spacings.large }]}>
-                {selectedCollectionId === item?.id && <View style={{ width: 5, backgroundColor: redColor, height: hp(10), borderTopRightRadius: 10, borderBottomRightRadius: 10, marginBottom: 25 }}>
+              <Pressable onPress={() => onPressCollection(item?.node.id, item?.node.title)} style={[alignItemsCenter, {
+                flexDirection: 'row', paddingleft: selectedCollectionId === item?.node.id ? 0 : 6,
+                backgroundColor: selectedCollectionId == item?.node.id ? "transparent" : lightGrayOpacityColor,
+                width:wp(23)
+              }]}>
+                {selectedCollectionId === item?.node?.id && <View style={{ width: 5, backgroundColor: redColor, height: hp(10), borderTopRightRadius: 10, borderBottomRightRadius: 10, marginBottom: 25 }}>
                 </View>}
-                <View style={{ height: 'auto', padding: selectedCollectionId === item?.id ? spacings.small : spacings.normal, alignItems: "center", justifyContent: "center", }}>
+                <View style={{ height: 'auto', padding: selectedCollectionId === item?.node.id ? spacings.small : spacings.small, alignItems: "center", justifyContent: "center", }}>
                   <View style={{
                     backgroundColor: whiteColor, borderWidth: selectedCollectionId === item?.node?.id ? 0 : 1,
-                    borderRadius: 10, height: hp(10), overflow: "hidden", borderColor: selectedCollectionId === item?.id ? redColor : themecolors.mediumGray, width: wp(15)
+                    borderRadius: 10, height: hp(10), overflow: "hidden", borderColor: selectedCollectionId === item?.node?.id ? redColor : themecolors.mediumGray, width: wp(15)
                   }}>
-                    <Image source={{ uri: item?.image?.url }} style={[resizeModeCover, styles.card]} />
+                    <Image source={{ uri: item?.node.image?.url }} style={[resizeModeCover, styles.card]} />
                   </View>
-                  <Text style={[styles.categoryName, textAlign, { color: selectedCollectionId === item?.id ? redColor : themecolors.blackColor }]}>{item?.title}</Text>
+                  <Text style={[styles.categoryName, textAlign, { color: selectedCollectionId === item?.node?.id ? redColor : themecolors.blackColor }]}>{item?.node?.title}</Text>
                 </View>
               </Pressable>
             )}
@@ -269,7 +277,7 @@ function CatalogScreen({ navigation }: Props) {
         <View style={[styles.productDetailsBox, { paddingBottom: isDarkMode ? spacings.xLarge : 0 }]}>
           {!loading ? <>
             <Text style={{ fontWeight: style.fontWeightThin1x.fontWeight, color: themecolors.blackColor, fontSize: style.fontSizeNormal2x.fontSize, padding: spacings.large }}>
-              <Text style={{ fontWeight: style.fontWeightMedium1x.fontWeight, color: themecolors.blackColor, fontSize: style.fontSizeNormal2x.fontSize, padding: spacings.large }}>{products.length} items
+              <Text style={{ fontWeight: style.fontWeightMedium1x.fontWeight, color: themecolors.blackColor, fontSize: style.fontSizeNormal2x.fontSize, padding: spacings.large }}>{products?.length} items
               </Text> in {collectionTitle}</Text>
             <FlatList
               data={products}
@@ -280,15 +288,18 @@ function CatalogScreen({ navigation }: Props) {
                     product={item}
                     onAddToCart={addToCartProduct}
                     loading={addingToCart?.has(getVariant(item)?.id ?? '')}
-                    inventoryQuantity={inventoryQuantities[index]}
+                    // inventoryQuantity={inventoryQuantities[index]}
                     option={options[index]}
                     ids={productVariantsIDS[index]}
-                    width={wp(36.5)}
+                    saveIconTop={true}
+                    width={wp(36)}
+                    height={wp(55.4)}
+                    spaceTop={4}
                     onPress={() => {
                       navigation.navigate('ProductDetails', {
                         product: item,
                         variant: getVariant(item),
-                        inventoryQuantity: inventoryQuantities[index],
+                        // inventoryQuantity: inventoryQuantities[index],
                         tags: tags[index],
                         option: options[index],
                         ids: productVariantsIDS[index]
@@ -313,7 +324,7 @@ function CatalogScreen({ navigation }: Props) {
           }
         </View>
       </View>
-      <ChatButton onPress={handleChatButtonPress} />
+      {/* <ChatButton onPress={handleChatButtonPress} /> */}
     </ImageBackground>
 
   );

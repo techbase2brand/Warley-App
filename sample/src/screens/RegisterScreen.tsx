@@ -26,9 +26,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { loginSuccess } from '../redux/actions/authActions';
 import { useThemes } from '../context/ThemeContext';
 import { lightColors, darkColors } from '../constants/Color';
+import { useNavigation } from '@react-navigation/native';
 const { flex, alignJustifyCenter, alignItemsCenter, borderWidth1, borderRadius5, resizeModeContain, flexDirectionRow, positionAbsolute, textAlign, textDecorationUnderline } = BaseStyle;
 
-const RegisterScreen = ({ navigation }: { navigation: any }) => {
+const RegisterScreen = ({onBackToLogin }) => {
+  const navigation = useNavigation();
   const { isDarkMode } = useThemes();
   const colors = isDarkMode ? darkColors : lightColors;
   const [firstName, setFirstName] = useState('');
@@ -65,10 +67,10 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
     setPasswordError('');
     setConfirmPasswordError('');
 
-    if (!firstName || !lastName || !phone || !email || !password || !confirmPassword) {
-      setError(PLEASE_FILL_ALL_FIELD);
-      return;
-    }
+    // if (!firstName || !lastName || !phone || !email || !password || !confirmPassword) {
+    //   setError(PLEASE_FILL_ALL_FIELD);
+    //   return;
+    // }
     if (!emailPattern.test(email)) {
       setEmailError(INVALID_EMAIL_FORMAT);
       return;
@@ -184,72 +186,6 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
-  const onFacebookButtonPress = async () => {
-    logEvent('Sign up with Facebook Button clicked');
-    try {
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
-      setLoading(true);
-
-      if (result.isCancelled) {
-        logEvent('Sign Up with Facebook cancelled by user');
-        throw new Error('User cancelled the login process');
-      }
-
-      const data = await AccessToken.getCurrentAccessToken();
-      if (!data) {
-        throw new Error('Something went wrong obtaining access token');
-      }
-
-      const facebookCredential = auth.FacebookAuthProvider.credential(data.accessToken);
-      const userCredential = await auth().signInWithCredential(facebookCredential);
-
-
-      if (userCredential.additionalUserInfo.isNewUser) {
-        const { profile } = userCredential.additionalUserInfo;
-        const { first_name, last_name, email, picture } = profile;
-        await AsyncStorage.setItem('userImage', picture?.data?.url);
-
-        // Check if user is registered in Shopify
-        const isRegistered = await checkIfUserIsRegistered(email);
-
-        if (isRegistered) {
-          await AsyncStorage.setItem('isUserLoggedIn', profile.id);
-          navigation.navigate("Home");
-          dispatch(loginSuccess({ email, password: '' }));
-          setLoading(false);
-          logEvent('Sign in with Facebook Success');
-        } else {
-          // Register the new user to Shopify
-          const shopifyResponse = await registerUserToShopify({
-            email,
-            password: "defaultPassword",
-            password_confirmation: "defaultPassword",
-            first_name,
-            last_name,
-          });
-          // console.log('Shopify response:', shopifyResponse);
-          await AsyncStorage.setItem('userDetails', JSON.stringify(shopifyResponse));
-          Toast.show('User Logged In Successfully');
-          dispatch(loginSuccess({ email, password: '' }));
-          navigation.navigate("Home");
-          setLoading(false);
-          logEvent('Sign In with Facebook Success');
-        }
-      } else {
-        // Existing user logic
-        const { profile } = userCredential.additionalUserInfo;
-        await AsyncStorage.setItem('isUserLoggedIn', profile.id);
-        navigation.navigate("Home");
-        dispatch(loginSuccess({ email: profile.email, password: '' }));
-        setLoading(false);
-        logEvent('Sign In with Facebook Success');
-      }
-    } catch (error) {
-      console.error(error);
-      setLoading(false);
-      logEvent(`Sign Up with Facebook error: ${error.message}`);
-    }
-  };
 
   //registerUserToShopify when user sign with google
   const registerUserToShopify = async (userData) => {
@@ -359,12 +295,11 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
+      <KeyboardAvoidingView
+        style={[styles.container]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
 
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.whiteColor }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ImageBackground style={[flex, { backgroundColor: colors.whiteColor }]} source={isDarkMode ? '' : BACKGROUND_IMAGE}>
         {showOTP ?
           <>
             <View style={[styles.logoBox, alignJustifyCenter, { height: hp(25), }]}>
@@ -424,18 +359,20 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
           </>
           :
           <>
-            <TouchableOpacity style={[positionAbsolute, styles.backIcon]} onPress={() => { logEvent(`Back Button Pressed from Register`), navigation.goBack() }}>
+            {/* <TouchableOpacity style={[positionAbsolute, styles.backIcon]} onPress={() => { logEvent(`Back Button Pressed from Register`), navigation.goBack() }}>
               <Ionicons name={"arrow-back"} size={33} color={colors.blackColor} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <View style={[styles.logoBox, alignJustifyCenter]}>
-              <Text style={[styles.text, { color: colors.blackColor }]}>Get Started With</Text>
-              <Text style={[styles.text, { color: redColor }]}>{APP_NAME}</Text>
+              <Text style={[styles.text, { color: colors.blackColor }]}>Sign Up</Text>
             </View>
             <View style={[styles.textInputBox]}>
               <View style={[flexDirectionRow]}>
                 <View style={{ width: "48%", marginRight: spacings.large, }}>
                   <Text style={[styles.textInputHeading, { color: colors.blackColor }]}>{FIRST_NAME}</Text>
                   <View style={[styles.halfInput, borderRadius5, borderWidth1, flexDirectionRow, alignItemsCenter, { borderColor: colors.grayColor }]}>
+                    <View>
+                      <Ionicons name={"person-sharp"} size={20} color={colors.grayColor} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
                         placeholder={FIRST_NAME}
@@ -450,6 +387,9 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
                 <View style={{ width: "48%", marginRight: spacings.large, }}>
                   <Text style={[styles.textInputHeading, { color: colors.blackColor }]}>{LAST_NAME}</Text>
                   <View style={[styles.halfInput, borderRadius5, borderWidth1, flexDirectionRow, alignItemsCenter, { borderColor: colors.grayColor }]}>
+                    <View>
+                      <Ionicons name={"person-sharp"} size={20} color={colors.grayColor} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
                         placeholder={LAST_NAME}
@@ -464,6 +404,9 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
               </View>
               <Text style={[styles.textInputHeading, { color: colors.blackColor }]}>{"Phone Number"}</Text>
               <View style={[styles.input, borderRadius5, borderWidth1, flexDirectionRow, alignItemsCenter, { borderColor: colors.grayColor }]}>
+                <View>
+                  <MaterialCommunityIcons name={"phone"} size={20} color={colors.grayColor} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <TextInput
                     placeholder="Phone Number"
@@ -478,6 +421,9 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
               </View>
               <Text style={[styles.textInputHeading, { color: colors.blackColor }]}>{EMAIL}</Text>
               <View style={[styles.input, borderRadius5, borderWidth1, flexDirectionRow, alignItemsCenter, { borderColor: colors.grayColor }]}>
+                <View>
+                  <MaterialCommunityIcons name={"email-outline"} size={20} color={emailError ? redColor : colors.grayColor} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <TextInput
                     placeholder={EMAIL}
@@ -495,9 +441,12 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
                 <View style={{ width: "48%", marginRight: spacings.large, }}>
                   <Text style={[styles.textInputHeading, { color: colors.blackColor }]}>{PASSWORD}</Text>
                   <View style={[styles.halfInput, borderRadius5, borderWidth1, flexDirectionRow, alignItemsCenter, { borderColor: colors.grayColor }]}>
+                    <View>
+                      <MaterialCommunityIcons name={"lock"} size={20} color={passwordError ? redColor : colors.grayColor} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
-                        placeholder={PASSWORD}
+                        placeholder={"Current"}
                         placeholderTextColor={colors.grayColor}
                         onChangeText={setPassword}
                         value={password}
@@ -506,16 +455,19 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
                       />
                     </View>
                     <TouchableOpacity onPress={toggleShowPassword}>
-                      <MaterialCommunityIcons name={showPassword ? "eye" : "eye-off"} size={20} color={grayColor} />
+                      <MaterialCommunityIcons name={showPassword ? "eye" : "eye-off"} size={20} color={colors.grayColor} />
                     </TouchableOpacity>
                   </View>
                 </View>
                 <View style={{ width: "48%", marginRight: spacings.large, }}>
                   <Text style={[styles.textInputHeading, { color: colors.blackColor }]}>{CONFIRM_PASSWORD}</Text>
                   <View style={[styles.halfInput, borderRadius5, borderWidth1, flexDirectionRow, alignItemsCenter, { borderColor: colors.grayColor }]}>
+                    <View >
+                      <MaterialCommunityIcons name={"lock"} size={20} color={confirmPasswordError ? redColor : colors.grayColor} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
-                        placeholder={CONFIRM_PASSWORD}
+                        placeholder={"Confirm"}
                         placeholderTextColor={colors.grayColor}
                         onChangeText={setConfirmPassword}
                         value={confirmPassword}
@@ -533,11 +485,9 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
               <Pressable style={[styles.button, alignItemsCenter, borderRadius5]} onPress={handleSendOtp}>
                 <Text style={styles.buttonText}>{"Register"}</Text>
               </Pressable>
-              <Pressable style={[{ width: "100%", height: hp(6) }, alignJustifyCenter]} onPress={() => { logEvent('SignUp Button clicked From Login Screen'), navigation.navigate("Login") }}>
-                <Text style={[{ marginTop: spacings.Large1x, color: colors.blackColor }]}>{ALREADY_HAVE_AN_ACCOUNT}<Text style={[{ color: colors.redColor }]}>{LOGIN}</Text></Text>
-              </Pressable>
-              <View style={[alignJustifyCenter, { height: hp(9) }]}>
-                <View style={[flexDirectionRow, alignJustifyCenter, { width: "100%", marginTop: spacings.large }]}>
+
+              <View style={[alignJustifyCenter, { }]}>
+                <View style={[flexDirectionRow, alignJustifyCenter, { width: "100%", marginVertical: 10  }]}>
                   <View style={{ height: 1, backgroundColor: colors.grayColor, width: "46%" }}></View>
                   <Text style={[{ color: colors.blackColor, margin: spacings.small }, textAlign]}>{"Or"}</Text>
                   <View style={{ height: 1, backgroundColor: colors.grayColor, width: "46%" }}></View>
@@ -551,26 +501,32 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
                   </TouchableOpacity>}
                 </View>
               </View>
-              <Text style={[{ marginTop: spacings.Large1x, color: colors.blackColor }, textAlign]}>{BY_CONTINUING_YOU_AGREE}</Text>
-              <View style={[flexDirectionRow, { marginTop: spacings.large, width: "100%" }, alignJustifyCenter]}>
-                <TouchableOpacity onPress={() => {
-                  navigation.navigate('WebViewScreen', {
-                    headerText: TERM_OF_SERVICES
-                  })
-                }}>
-                  <Text style={[{ color: colors.blackColor, margin: 4 }, textDecorationUnderline]}>{TERM_OF_SERVICES}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => {
-                  navigation.navigate('WebViewScreen', {
-                    headerText: PRIVACY_POLICY
-                  })
-                }}>
-                  <Text style={[{ color: colors.blackColor, margin: 4 }, textDecorationUnderline]}>{PRIVACY_POLICY}</Text>
-                </TouchableOpacity>
+              <Pressable style={[{ width: "100%"}, alignJustifyCenter]} onPress={onBackToLogin}>
+                <Text style={[{ marginTop: 6, color: colors.blackColor }]}>{ALREADY_HAVE_AN_ACCOUNT} <Text style={[{ color: colors.redColor }]}>{LOGIN}</Text></Text>
+              </Pressable>
+              <View style={[positionAbsolute, alignJustifyCenter, { bottom: 25, width: "100%" }]}>
+                <Text style={[{ color: colors.blackColor }, textAlign]}>{BY_CONTINUING_YOU_AGREE}</Text>
+                <View style={[flexDirectionRow, { marginTop: 5, width: "100%" }, alignJustifyCenter]}>
+                  <TouchableOpacity onPress={() => {
+                    navigation.navigate('WebViewScreen', {
+                      headerText: TERM_OF_SERVICES
+                    }),
+                      logEvent('Terms Of Services From login');
+                  }}>
+                    <Text style={[{ color: colors.redColor, margin: 4 }, textDecorationUnderline]}>{TERM_OF_SERVICES}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => {
+                    navigation.navigate('WebViewScreen', {
+                      headerText: PRIVACY_POLICY
+                    }),
+                      logEvent('Privacy Policy From login');
+                  }}>
+                    <Text style={[{ color: colors.redColor, margin: 4 }, textDecorationUnderline]}>{PRIVACY_POLICY}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </>}
-
         {loading &&
           <LoadingModal visible={loading} />
         }
@@ -579,23 +535,21 @@ const RegisterScreen = ({ navigation }: { navigation: any }) => {
           onClose={() => setSuccessModalVisible(false)}
           onPressContinue={handleSignUp}
         />}
-
-      </ImageBackground>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
 
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingHorizontal: 20,
     width: wp(100),
     height: hp(100)
   },
   logoBox: {
     width: "100%",
-    height: hp(11),
-    marginVertical: spacings.xxxLarge
+    height: hp(6),
+    marginBottom: spacings.xxxLarge
   },
   text: {
     fontSize: style.fontSizeLarge2x.fontSize,
@@ -625,7 +579,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: redColor,
     paddingVertical: spacings.xLarge,
-    marginTop: spacings.xxxxLarge
+    marginTop: spacings.ExtraLarge
   },
   buttonText: {
     color: whiteColor,
@@ -634,25 +588,26 @@ const styles = StyleSheet.create({
   },
   textInputBox: {
     width: "100%",
-    height: hp(85)
+    height: hp(80)
   },
 
   errorText: {
     color: redColor
   },
-  backIcon: {
-    top: -15,
-    left: -10,
-    width: wp(10),
-    height: hp(5)
-  },
+  // backIcon: {
+  //   top: 15,
+  //   left: 10,
+  //   width: wp(10),
+  //   height: hp(5)
+  // },
   socialAuthBox: {
     width: '100%',
+    // marginTop: spacings.xxLarge
   },
   socialButton: {
     width: wp(12),
-    height: wp(12),
-    borderRadius: 50,
+    height: wp(10),
+    borderRadius: 10,
     borderWidth: .5,
     borderColor: grayColor,
     marginHorizontal: spacings.large

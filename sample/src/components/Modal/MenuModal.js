@@ -93,7 +93,7 @@ const MenuModal = ({ modalVisible, setModalVisible, onPressCart, onPressSearch, 
               />
             </Pressable>
           </Pressable>
-          {!userLoggedIn && <Pressable style={[styles.menuItem, justifyContentSpaceBetween, flexDirectionRow, alignItemsCenter]} onPress={onPressSignUp}>
+          {/* {!userLoggedIn && <Pressable style={[styles.menuItem, justifyContentSpaceBetween, flexDirectionRow, alignItemsCenter]} onPress={onPressSignUp}>
             <Text style={[styles.menuText, { color: colors.blackColor }]}>{SIGNUP}</Text>
             <Feather name={"chevron-right"} size={25} color={colors.blackColor} />
           </Pressable>}
@@ -102,7 +102,7 @@ const MenuModal = ({ modalVisible, setModalVisible, onPressCart, onPressSearch, 
               <Image source={isDarkMode ? WHITE_USER_IMAGE : USER_IMAGE} style={[{ resizeMode: "contain", width: wp(8), height: hp(3.5) }]} />
               <Text style={[styles.menuText, { paddingLeft: spacings.medium, color: colors.blackColor }]}>{LOGIN}</Text>
             </Pressable>
-          </View>}
+          </View>} */}
         </View>
       </View>
     </Modal >

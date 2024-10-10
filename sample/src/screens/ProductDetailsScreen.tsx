@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, Text, Image, Pressable, ActivityIndicator, TouchableOpacity, FlatList, Alert, ImageBackground, Linking } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { ScrollView, View, StyleSheet, Text, Image, Pressable, ActivityIndicator, TouchableOpacity, FlatList, Alert, ImageBackground, Linking, Animated } from 'react-native';
 import { Colors, useTheme } from '../context/Theme';
 import { useCart } from '../context/Cart';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,11 +9,12 @@ import Toast from 'react-native-simple-toast';
 import FontAwesome from 'react-native-vector-icons/dist/FontAwesome';
 import Share from 'react-native-share';
 import axios from 'axios';
+import LoaderKit from 'react-native-loader-kit';
 import { blackColor, redColor, whiteColor, lightGrayOpacityColor, goldColor, lightPink, grayColor } from '../constants/Color';
 import { spacings, style } from '../constants/Fonts';
 import { BaseStyle } from '../constants/Style';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from '../utils';
-import { QUNATITY, getStoreDomain, getAdminAccessToken, YOU_MIGHT_LIKE, RATING_REVIEWS, getStoreFrontAccessToken, STOREFRONT_DOMAIN, ADMINAPI_ACCESS_TOKEN, STOREFRONT_ACCESS_TOKEN } from '../constants/Constants';
+import { QUNATITY, getStoreDomain, getAdminAccessToken, YOU_MIGHT_LIKE, LOADER_NAME, ELECTRONIC_OUR_PRODUCT_COLLECTION_ID, OUR_PRODUCT, RATING_REVIEWS, getStoreFrontAccessToken, STOREFRONT_DOMAIN, ADMINAPI_ACCESS_TOKEN, STOREFRONT_ACCESS_TOKEN } from '../constants/Constants';
 import { logEvent } from '@amplitude/analytics-react-native';
 import { ShopifyProduct } from '../../@types';
 import { BACKGROUND_IMAGE, LADY_DONALD_RICE } from '../assests/images';
@@ -21,6 +22,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToWishlist, removeFromWishlist } from '../redux/actions/wishListActions';
 import AntDesign from 'react-native-vector-icons/dist/AntDesign';
 import Header from '../components/Header';
+import Product from '../components/ProductVertical';
 import dynamicLinks from '@react-native-firebase/dynamic-links';
 import LoadingModal from '../components/Modal/LoadingModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,6 +46,7 @@ function ProductDetailsScreen({ navigation, route }: Props) {
   const [relatedProducts, setRelatedProducts] = useState<ShopifyProduct[]>([]);
   const { tags, option, ids } = route?.params;
   const [selectedOptions, setSelectedOptions] = useState({});
+  const [shareProductloading, setShareProductLoading] = useState(false);
   const dispatch = useDispatch();
   const { isDarkMode } = useThemes();
   const themecolors = isDarkMode ? darkColors : lightColors;
@@ -113,11 +116,84 @@ function ProductDetailsScreen({ navigation, route }: Props) {
     scheduleNotification();
   };
 
+
+  const getProductHandleById = async (id: string) => {
+    const query = `
+      query($id: ID!) {
+        product(id: $id) {
+          handle
+        }
+      }
+    `;
+    const variables = {
+      id: id
+    };
+    const response = await fetch(`https://${STOREFRONT_DOMAIN}/api/2023-04/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Storefront-Access-Token': STOREFRONT_ACCESS_TOKEN,
+      },
+      body: JSON.stringify({ query, variables })
+    });
+    const responseData = await response.json();
+    if (responseData.errors) {
+      console.error('Error fetching product handle:', responseData.errors);
+      return null;
+    }
+    return responseData.data.product.handle;
+  };
+
+  const generateLink = async (id: string) => {
+    try {
+      const link = await dynamicLinks().buildShortLink({
+        link: `https://warley.page.link/XktS?productId=${id}`,
+        domainUriPrefix: 'https://warley.page.link',
+        android: {
+          packageName: 'com.Warley',
+        },
+
+      }, dynamicLinks.ShortLinkType.DEFAULT)
+      return link
+    } catch (error) {
+      console.log('Generating Link Error:', error)
+    }
+  }
+
+  const shareProduct = async (id: string) => {
+    setShareProductLoading(true)
+    logEvent('Share Product Button Clicked');
+    const getLink = await generateLink(id)
+    try {
+      const handle = await getProductHandleById(id);
+
+      if (!handle) {
+        throw new Error('Product handle not found');
+      }
+
+      const shareUrl = getLink;
+      const shareOptions = {
+        title: 'Share Product',
+        message: `Check out this product: ${shareUrl}`,
+      };
+      setShareProductLoading(false)
+      await Share.open(shareOptions);
+
+      logEvent(`Share Product Name: ${product.title}`);
+
+    } catch (error) {
+      console.log('Error => ', error);
+    }
+  };
+  console.log("route?.params?.product.title", route?.params?.product.id);
+
   return (
     <ImageBackground style={[styles.container, { backgroundColor: themecolors.whiteColor }]} source={isDarkMode ? '' : BACKGROUND_IMAGE}>
       <Header
-        backIcon={true} text={route?.params?.product.title}
-        shoppingCart={true} navigation={navigation} />
+        backIcon={true} textinput={true} text={route?.params?.product.title}
+        shoppingCart={true} share={true} navigation={navigation} productId={route?.params?.product.id} shareProduct={shareProduct} />
+      <View style={{ width: "100%", height: 5, backgroundColor: whiteColor }}></View>
+
       <ProductDetails
         product={route?.params?.product}
         onAddToCart={(variantId: string, quantity: number) => onAddtoCartProduct(variantId, quantity)}
@@ -132,6 +208,8 @@ function ProductDetailsScreen({ navigation, route }: Props) {
         selectedOptions={selectedOptions}
         handleSelectOption={handleSelectOption}
         ids={route?.params?.ids}
+        shareProductloading={shareProductloading}
+        shareProduct={shareProduct}
       />
 
     </ImageBackground>
@@ -158,6 +236,8 @@ function ProductDetails({
   selectedOptions,
   handleSelectOption,
   ids,
+  shareProductloading,
+  shareProduct
 }: {
   product: ShopifyProduct;
   loading?: boolean;
@@ -168,6 +248,9 @@ function ProductDetails({
   selectedOptions: any;
   handleSelectOption: (optionName: string, value: string) => void;
   ids?: string,
+  shareProductloading,
+  shareProduct: (id: string) => void;
+
 }) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -180,8 +263,11 @@ function ProductDetails({
   const wishList = useSelector(state => state.wishlist.wishlist);
   const isSelected = wishList.some(item => item.id === product.id);
   const [expanded, setExpanded] = useState(false);
+  const { checkoutURL } = useCart();
+  const userLoggedIn = useSelector(state => state.auth.isAuthenticated);
+  const slideAnim = useRef(new Animated.Value(500)).current;
   const [loadingProductId, setLoadingProductId] = useState(null);
-  const [shareProductloading, setShareProductLoading] = useState(false);
+  // const [shareProductloading, setShareProductLoading] = useState(false);
   const [shopCurrency, setShopCurrency] = useState('');
   const selectedItem = useSelector((state) => state.menu.selectedItem);
   const { isDarkMode } = useThemes();
@@ -190,6 +276,12 @@ function ProductDetails({
   const [rating, setRating] = useState(null);
   const [reviewDescription, setReviewDescription] = useState('');
   const [customerName, setCustomerName] = useState("");
+  const [inventoryQuantities, setInventoryQuantities] = useState('');
+  const [tags, setTags] = useState<string[][]>([]);
+  const [option, setOptions] = useState([]);
+  const [productVariantsIDS, setProductVariantsIDS] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
 
   useEffect(() => {
     // Check if no option is selected
@@ -249,74 +341,74 @@ function ProductDetails({
     return 0;
   }
 
-  const getProductHandleById = async (id: string) => {
-    const query = `
-      query($id: ID!) {
-        product(id: $id) {
-          handle
-        }
-      }
-    `;
-    const variables = {
-      id: id
-    };
-    const response = await fetch(`https://${STOREFRONT_DOMAIN}/api/2023-04/graphql.json`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Storefront-Access-Token': STOREFRONT_ACCESS_TOKEN,
-      },
-      body: JSON.stringify({ query, variables })
-    });
-    const responseData = await response.json();
-    if (responseData.errors) {
-      console.error('Error fetching product handle:', responseData.errors);
-      return null;
-    }
-    return responseData.data.product.handle;
-  };
+  // const getProductHandleById = async (id: string) => {
+  //   const query = `
+  //     query($id: ID!) {
+  //       product(id: $id) {
+  //         handle
+  //       }
+  //     }
+  //   `;
+  //   const variables = {
+  //     id: id
+  //   };
+  //   const response = await fetch(`https://${STOREFRONT_DOMAIN}/api/2023-04/graphql.json`, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'X-Shopify-Storefront-Access-Token': STOREFRONT_ACCESS_TOKEN,
+  //     },
+  //     body: JSON.stringify({ query, variables })
+  //   });
+  //   const responseData = await response.json();
+  //   if (responseData.errors) {
+  //     console.error('Error fetching product handle:', responseData.errors);
+  //     return null;
+  //   }
+  //   return responseData.data.product.handle;
+  // };
 
-  const generateLink = async (id: string) => {
-    try {
-      const link = await dynamicLinks().buildShortLink({
-        link: `https://appcatify.page.link/ezHe?productId=${id}`,
-        domainUriPrefix: 'https://appcatify.page.link',
-        android: {
-          packageName: 'com.Warley',
-        },
+  // const generateLink = async (id: string) => {
+  //   try {
+  //     const link = await dynamicLinks().buildShortLink({
+  //       link: `https://appcatify.page.link/ezHe?productId=${id}`,
+  //       domainUriPrefix: 'https://appcatify.page.link',
+  //       android: {
+  //         packageName: 'com.Warley',
+  //       },
 
-      }, dynamicLinks.ShortLinkType.DEFAULT)
-      return link
-    } catch (error) {
-      console.log('Generating Link Error:', error)
-    }
-  }
+  //     }, dynamicLinks.ShortLinkType.DEFAULT)
+  //     return link
+  //   } catch (error) {
+  //     console.log('Generating Link Error:', error)
+  //   }
+  // }
 
-  const shareProduct = async (id: string) => {
-    setShareProductLoading(true)
-    logEvent('Share Product Button Clicked');
-    const getLink = await generateLink(id)
-    try {
-      const handle = await getProductHandleById(id);
+  // const shareProduct = async (id: string) => {
+  //   setShareProductLoading(true)
+  //   logEvent('Share Product Button Clicked');
+  //   const getLink = await generateLink(id)
+  //   try {
+  //     const handle = await getProductHandleById(id);
 
-      if (!handle) {
-        throw new Error('Product handle not found');
-      }
+  //     if (!handle) {
+  //       throw new Error('Product handle not found');
+  //     }
 
-      const shareUrl = getLink;
-      const shareOptions = {
-        title: 'Share Product',
-        message: `Check out this product: ${shareUrl}`,
-      };
-      setShareProductLoading(false)
-      await Share.open(shareOptions);
+  //     const shareUrl = getLink;
+  //     const shareOptions = {
+  //       title: 'Share Product',
+  //       message: `Check out this product: ${shareUrl}`,
+  //     };
+  //     setShareProductLoading(false)
+  //     await Share.open(shareOptions);
 
-      logEvent(`Share Product Name: ${product.title}`);
+  //     logEvent(`Share Product Name: ${product.title}`);
 
-    } catch (error) {
-      console.log('Error => ', error);
-    }
-  };
+  //   } catch (error) {
+  //     console.log('Error => ', error);
+  //   }
+  // };
 
   const toggleExpanded = () => {
     setExpanded(!expanded);
@@ -352,12 +444,88 @@ function ProductDetails({
 
   const trimcateText = (text) => {
     const words = text.split(' ');
-    if (words.length > 4) {
-      return words.slice(0, 4).join(' ') + '...';
+    if (words.length > 3) {
+      return words.slice(0, 3).join(' ') + '...';
     }
     return text;
   };
 
+  useEffect(() => {
+    const fetchproduct = () => {
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+      myHeaders.append("X-Shopify-Access-Token", ADMINAPI_ACCESS_TOKEN);
+      const graphql = JSON.stringify({
+        query: `query MyQuery {
+        collection(id: "gid://shopify/Collection/331437375641") {
+          products(first: 4) {
+            nodes {
+              id
+              images(first: 4) {
+                nodes {
+                  src
+                  url
+                }
+              }
+              title
+              tags
+              options(first:4){
+                id
+                name
+                values
+              }
+              variants(first: 4) {
+                nodes {
+                  price
+                  inventoryQuantity
+                  id
+                  title
+                  image {
+                    originalSrc
+                  }
+                }
+              }
+            }
+          }
+        }
+      }`,
+        variables: {}
+      });
+      const requestOptions = {
+        method: "POST",
+        headers: myHeaders,
+        body: graphql,
+        redirect: "follow"
+      };
+      fetch(`https://${STOREFRONT_DOMAIN}/admin/api/2024-04/graphql.json`, requestOptions)
+        .then((response) => response.text())
+        .then((result) => {
+          const fetchedProducts = JSON.parse(result);
+          setProducts(fetchedProducts?.data?.collection?.products?.nodes);
+          const inventoryQuantities = fetchedProducts?.data?.collection?.products?.nodes?.map((productEdge) => {
+            return productEdge?.variants?.nodes?.map((variants) => variants?.inventoryQuantity);
+          });
+          setInventoryQuantities(inventoryQuantities)
+          const fetchedOptions = fetchedProducts?.data?.collection?.products?.nodes?.map((product) => product?.options);
+          setOptions(fetchedOptions);
+
+          const productVariantData = fetchedProducts?.data?.collection?.products?.nodes.map((product) =>
+            product.variants.nodes.map((variant) => ({
+              id: variant?.id,
+              title: variant?.title,
+              inventoryQty: variant?.inventoryQuantity,
+              image: variant?.image
+            }))
+          );
+          setProductVariantsIDS(productVariantData);
+
+          const fetchedTags = fetchedProducts?.data?.collection?.products?.nodes.map(productEdge => productEdge?.tags);
+          setTags(fetchedTags)
+        })
+        .catch((error) => console.log(error));
+    }
+    fetchproduct();
+  }, [])
   const fetchProductMetafields = async (productID: any) => {
     const numericProductID = productID.split('/').pop();
     try {
@@ -409,6 +577,7 @@ function ProductDetails({
     }
   };
 
+
   const getInitials = (name) => {
     return name ? name.split(' ').map(word => word.charAt(0).toUpperCase()).join('') : '';
   };
@@ -427,6 +596,48 @@ function ProductDetails({
   const handleChatButtonPress = () => {
     logEvent('Chat button clicked in ProdcutDetails Screen');
     navigation.navigate("ShopifyInboxScreen");
+  };
+
+  const presentCheckout = async () => {
+    logEvent('Click CheckOut ');
+    if (!userLoggedIn) {
+      logEvent('user not login Go to Auth');
+      openModal()
+      // navigation.navigate("AuthStack");
+      Toast.show("Please First complete the registration process")
+    } else {
+      if (checkoutURL) {
+        // console.log(checkoutURL)
+        // ShopifyCheckout.present(checkoutURL);
+        navigation.navigate('ShopifyCheckOut', {
+          url: checkoutURL,
+        });
+        cancelScheduledNotification()
+        logEvent('Open CheckOut ');
+      } else {
+        console.log('Checkout URL is not available');
+      }
+    }
+  };
+
+  const openModal = () => {
+    setLoginModalVisible(true);
+    // Animate from bottom to top
+    Animated.timing(slideAnim, {
+      toValue: 0, // Slide to the top
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeModal = () => {
+    Animated.timing(slideAnim, {
+      toValue: 720, // Slide back to bottom
+      duration: 500,
+      useNativeDriver: true,
+    }).start(() => {
+      setLoginModalVisible(false);
+    });
   };
   return (
     <View>
@@ -450,21 +661,44 @@ function ProductDetails({
           </TouchableOpacity>
           <View style={[styles.productText, justifyContentSpaceBetween]}>
             <View>
-              <View style={[flexDirectionRow, { width: "100%" }]}>
-                <View style={{ width: "90%" }}>
-                  <Text style={[styles.productTitle, { color: themecolors.blackColor }]}>{trimcateText(product.title)}</Text>
+              <View style={[flexDirectionRow, { width: "100%", justifyContent: "space-between", alignItems: "center" }]}>
+                <View>
+                  <Text style={[styles.productTitle, { color: themecolors.blackColor, fontSize: 24 }]}>{trimcateText(product.title)}</Text>
                 </View>
-                <TouchableOpacity style={[alignJustifyCenter, styles.shareButton]} onPress={() => shareProduct(product.id)}>
+                <View style={{ marginTop: 10 }}>
+                  {/* <Text style={{ padding: spacings.large, color: themecolors.redColor, fontSize: style.fontSizeMedium.fontSize }}>{}</Text> */}
+                  <View style={[styles.quantityContainer, flexDirectionRow, alignJustifyCenter]}>
+                    <TouchableOpacity onPress={decrementQuantity} >
+                      <AntDesign
+                        name={"minuscircle"}
+                        size={25}
+                        color={"#eb4335"}
+                      />
+                    </TouchableOpacity>
+                    <Text style={[styles.quantity, { color: themecolors.blackColor }]}>{quantity}</Text>
+                    <TouchableOpacity onPress={incrementQuantity}  >
+                      {/* <Text style={[styles.quantityButton, textAlign, { color: whiteColor }]}>+</Text> */}
+                      <AntDesign
+                        name={"pluscircle"}
+                        size={25}
+                        color={"#eb4335"}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                {/* <TouchableOpacity style={[alignJustifyCenter, styles.shareButton]} onPress={() => shareProduct(product.id)}>
                   <FontAwesome name="share" size={20} color={isDarkMode ? themecolors.lightPink : "#B5A2A2"} />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
               <View style={[flexDirectionRow, { width: "100%" }]}>
-                <Text style={[styles.productPrice, { color: themecolors.blackColor }]}>{(variant?.price?.amount) ? (variant?.price?.amount) : (variant?.price)} {(variant?.price?.currencyCode) ? (variant?.price?.currencyCode) : shopCurrency}</Text>
+                <Text style={[styles.productPrice, { color: "#eb4335", fontSize: 20 }]}>{(variant?.price?.amount) ? (variant?.price?.amount) : (variant?.price)} {(variant?.price?.currencyCode) ? (variant?.price?.currencyCode) : shopCurrency}</Text>
                 <Pressable style={[flexDirectionRow, alignItemsCenter, { marginLeft: spacings.large }]}>
                   {/* <FontAwesome name="star" size={15} color={goldColor} />
                   <Text style={[styles.productDescription, { color: themecolors.blackColor }]}>  <Text style={[styles.productDescription, textDecorationUnderline, { fontWeight: style.fontWeightMedium1x.fontWeight, color: themecolors.blackColor }]}>4.0/5</Text> (45 reviews)</Text> */}
                 </Pressable>
               </View>
+              {product.description && <Text style={[styles.productPrice, { color: themecolors.blackColor }]}>About this product</Text>}
+
               {product.description && <Pressable onPress={toggleExpanded} style={{ marginVertical: spacings.large }}>
                 <Text style={[styles.productDescription, { color: "#808080" }]} numberOfLines={expanded ? null : 2}
                   ellipsizeMode="tail">{product.description}</Text>
@@ -474,11 +708,11 @@ function ProductDetails({
               <View>
                 {options?.map((option, index) => {
                   if (option.name === "Title" && option.values.includes("Default Title")) {
-                    return null; // Skip rendering this option
+                    return null;
                   }
                   return (
                     <View key={index} style={styles.optionContainer}>
-                      <Text style={[styles.relatedProductsTitle, { color: themecolors.blackColor }]}>Choose {option?.name}</Text>
+                      {/* <Text style={[styles.relatedProductsTitle, { color: themecolors.blackColor }]}>Choose {option?.name}</Text>
                       <View style={[flexDirectionRow, { marginTop: spacings.large }]}>
                         <ScrollView horizontal>
                           {option?.values.map((value, idx) => (
@@ -501,7 +735,7 @@ function ProductDetails({
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
-                      </View>
+                      </View> */}
                     </View>
                   );
                 })}
@@ -538,7 +772,7 @@ function ProductDetails({
               </View>
             </View> */}
             <View style={{ marginBottom: spacings.large }}>
-              <Text style={[styles.relatedProductsTitle, { color: themecolors.blackColor }]}>{RATING_REVIEWS}</Text>
+              <Text style={[styles.relatedProductsTitle, { color: themecolors.blackColor, fontSize: 20 }]}>{RATING_REVIEWS}</Text>
               <View style={[styles.reviewSection, flexDirectionRow, alignItemsCenter]}>
                 <View style={[{ width: wp(30) }, justifyContentSpaceBetween, flexDirectionRow]}>
                   {Array.from({ length: 5 }).map((_, index) => {
@@ -583,7 +817,7 @@ function ProductDetails({
               </View>
             </View>
           </View>
-          {relatedProducts?.length != 0 && <View style={styles.relatedProductsContainer}>
+          {/* {relatedProducts?.length != 0 && <View style={styles.relatedProductsContainer}>
             <Text style={[styles.relatedProductsTitle, { color: themecolors.blackColor }]}>{YOU_MIGHT_LIKE}</Text>
             <FlatList
               data={relatedProducts}
@@ -639,25 +873,66 @@ function ProductDetails({
               keyExtractor={(index) => index?.toString()}
               showsHorizontalScrollIndicator={false}
             />
-          </View>}
+          </View>} */}
+
+          {/* our product */}
+          <View style={[{ width: "100%", marginVertical: 10 }, alignItemsCenter, justifyContentSpaceBetween, flexDirectionRow]}>
+            <Text style={[styles.text, { color: blackColor }]}>{"Similar Products"}</Text>
+            {/* <Text style={{ color: "#717171", fontSize: style.fontSizeNormal.fontSize, fontWeight: style.fontWeightThin1x.fontWeight }} onPress={() => onPressCollection(ELECTRONIC_OUR_PRODUCT_COLLECTION_ID, OUR_PRODUCT)}>See All <AntDesign name={"arrowright"} size={16} color={"#717171"} /></Text> */}
+
+          </View>
+          <View style={[{ height: hp(30) }, alignJustifyCenter]}>
+            {products?.length > 0 ? <FlatList
+              data={products}
+              renderItem={({ item, index }) => {
+                return (
+                  <Product
+                    product={item}
+                    // onAddToCart={addToCartProduct}
+                    // loading={addingToCart?.has(getVariant(item)?.id ?? '')}
+                    inventoryQuantity={inventoryQuantities[index]}
+                    option={option[index]}
+                    ids={productVariantsIDS[index]}
+                    // width={wp(36)}
+                    onPress={() => {
+                      navigation.navigate('ProductDetails', {
+                        product: item,
+                        variant: getVariant(item),
+                        inventoryQuantity: inventoryQuantities[index],
+                        tags: tags[index],
+                        option: options[index],
+                        ids: productVariantsIDS[index]
+                      });
+                    }}
+                  />
+                );
+              }}
+              showsHorizontalScrollIndicator={false}
+              horizontal
+            /> :
+              <LoaderKit
+                style={{ width: 50, height: 50 }}
+                name={LOADER_NAME}
+                color={blackColor}
+              />
+            }
+          </View>
           {shareProductloading && <LoadingModal visible={shareProductloading} />}
         </View>
       </ScrollView>
       <ChatButton onPress={handleChatButtonPress} bottom={80} />
-      <View style={[flexDirectionRow, positionAbsolute, justifyContentSpaceBetween, { alignItems: "baseline", bottom: 4, width: wp(100), zIndex: 1, backgroundColor: themecolors.whiteColor, height: hp(10) }]}>
-        {getInventoryQuantity() > 0 && <View>
-          <Text style={{ padding: spacings.large, color: themecolors.redColor, fontSize: style.fontSizeMedium.fontSize }}>{QUNATITY}:</Text>
-          <View style={[styles.quantityContainer, flexDirectionRow, alignJustifyCenter]}>
-            <TouchableOpacity onPress={decrementQuantity}>
-              <Text style={[styles.quantityButton, borderRadius5, textAlign, { color: themecolors.blackColor, borderColor: themecolors.blackColor }]}>-</Text>
-            </TouchableOpacity>
-            <Text style={[styles.quantity, { color: themecolors.blackColor }]}>{quantity}</Text>
-            <TouchableOpacity onPress={incrementQuantity} >
-              <Text style={[styles.quantityButton, borderRadius5, textAlign, { color: themecolors.blackColor, borderColor: themecolors.blackColor }]}>+</Text>
-            </TouchableOpacity>
+      <View style={[flexDirectionRow, positionAbsolute, justifyContentSpaceBetween, { alignItems: "baseline", bottom: 20, width: wp(100), zIndex: 1, backgroundColor: themecolors.whiteColor, height: hp(10) }]}>
+        <View style={{ width: wp(40) }}>
+          <View style={[styles.quantityContainer, alignJustifyCenter, { width: wp(40) }]}>
+            <Text style={{ padding: spacings.large, color: themecolors.blackColor, fontSize: style.fontSizeMedium.fontSize, fontWeight: "600" }}>Total: £21.99</Text>
+            <Text style={{ backgroundColor: "#dafbd5", paddingHorizontal: 4, borderRadius: 5, color: "#018726" }}><AntDesign
+              name={"tag"}
+              size={15}
+              color={"#018726"}
+            />Saved £21.99 </Text>
           </View>
-        </View>}
-        <View style={[styles.addToCartButtonContainer, { position: "absolute", bottom: 4, right: 10, }]}>
+        </View>
+        <View style={[styles.addToCartButtonContainer, { position: "absolute", bottom: 15, right: 10, }]}>
           {getInventoryQuantity() <= 0 ? (
             <Pressable style={[styles.outOfStockButton, borderRadius10]}>
               <Text style={[styles.addToCartButtonText, textAlign]}>
@@ -668,14 +943,7 @@ function ProductDetails({
             <Pressable
               disabled={loading || !variantSelected}
               style={[styles.addToCartButton, borderRadius10]}
-              onPress={() => {
-                const selectedVariantId = getSelectedVariantId();
-                if (selectedVariantId) {
-                  onAddToCart(selectedVariantId, quantity);
-                } else {
-                  Alert.alert('Please select a variant before adding to cart');
-                }
-              }}
+              onPress={presentCheckout}
             >
               {loading ? (
                 <View style={[styles.addToCartButtonLoading, textAlign]}>
@@ -683,12 +951,15 @@ function ProductDetails({
                 </View>
               ) : (
                 <Text style={[styles.addToCartButtonLoading, textAlign, { color: whiteColor }]}>
-                  Add to cart
+                  Buy Now
                 </Text>
               )}
             </Pressable>
           )}
         </View>
+
+        {loginModalVisible && (
+          <LoginModal modalVisible={loginModalVisible} closeModal={closeModal} slideAnim={slideAnim} />)}
       </View>
     </View>
   );
@@ -766,10 +1037,9 @@ function createStyles(colors: Colors) {
     },
     quantityButton: {
       width: wp(7),
-      color: blackColor,
+      color: whiteColor,
       fontSize: style.fontSizeNormal2x.fontSize,
       fontWeight: style.fontWeightThin1x.fontWeight,
-      borderWidth: 1,
     },
     quantity: {
       paddingHorizontal: spacings.xxLarge,
@@ -846,8 +1116,6 @@ function createStyles(colors: Colors) {
       right: 20,
       top: 20,
       zIndex: 10,
-      backgroundColor: whiteColor,
-      borderRadius: 10
     },
     reviewSection: {
       width: "100%",
@@ -899,6 +1167,12 @@ function createStyles(colors: Colors) {
       fontSize: 30,
       color: '#fff',
       fontWeight: 'bold',
+    },
+    text: {
+      fontSize: style.fontSizeMedium1x.fontSize,
+      fontWeight: style.fontWeightThin1x.fontWeight,
+      color: blackColor,
+      fontFamily: 'GeneralSans-Variable'
     },
   });
 }

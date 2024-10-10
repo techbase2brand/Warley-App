@@ -109,4 +109,3 @@ export const DRINKS = "Drinks";
 export const BEAUTY = "Beauty";
 export const ELECTRONICS = "Electronics";
 export const LOADER_NAME = "BallClipRotateMultiple";
-

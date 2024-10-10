@@ -2057,6 +2057,11 @@
   resolved "https://registry.npmjs.org/@react-native-google-signin/google-signin/-/google-signin-12.1.1.tgz"
   integrity sha512-jvH8AFFD4syq+HaqHy8LZZl60QwT7ILtKmNLhw96hJ6G6EqOgGr+W2gOKQMbFlgBbu2rsgMiXQcaNpFphUcToA==
 
+"@react-native-masked-view/masked-view@^0.2.8":
+  version "0.2.9"
+  resolved "https://registry.npmjs.org/@react-native-masked-view/masked-view/-/masked-view-0.2.9.tgz"
+  integrity sha512-Hs4vKBKj+15VxHZHFtMaFWSBxXoOE5Ea8saoigWhahp8Mepssm0ezU+2pTl7DK9z8Y9s5uOl/aPb4QmBZ3R3Zw==
+
 "@react-native-picker/picker@^2.7.7":
   version "2.7.7"
   resolved "https://registry.npmjs.org/@react-native-picker/picker/-/picker-2.7.7.tgz"
@@ -5153,6 +5158,11 @@ react-native-gesture-handler@*, react-native-gesture-handler@^2.15.0, "react-nat
     lodash "^4.17.21"
     prop-types "^15.7.2"
 
+react-native-linear-gradient@^2.5.6, react-native-linear-gradient@^2.8.3:
+  version "2.8.3"
+  resolved "https://registry.npmjs.org/react-native-linear-gradient/-/react-native-linear-gradient-2.8.3.tgz"
+  integrity sha512-KflAXZcEg54PXkLyflaSZQ3PJp4uC4whM7nT/Uot9m0e/qxFV3p6uor1983D1YOBJbJN7rrWdqIjq0T42jOJyA==
+
 react-native-loader-kit@^2.0.8:
   version "2.0.8"
   resolved "https://registry.npmjs.org/react-native-loader-kit/-/react-native-loader-kit-2.0.8.tgz"
@@ -5208,6 +5218,11 @@ react-native-simple-toast@^3.3.1:
   resolved "https://registry.npmjs.org/react-native-simple-toast/-/react-native-simple-toast-3.3.1.tgz"
   integrity sha512-5SbAvZpzjSHNkMGbO1cr/7kg/oHZEVZbgeqC+6FtYTtvBbkRMbEaUIfiD1rvghbxZrJB783Y/mHRDUab2ogTqA==
 
+react-native-skeleton-placeholder@^5.2.4:
+  version "5.2.4"
+  resolved "https://registry.npmjs.org/react-native-skeleton-placeholder/-/react-native-skeleton-placeholder-5.2.4.tgz"
+  integrity sha512-OZntVq1hU1UX33FltxK2ezT2v9vHIhV8YnEbnMWUCvxT0N9OsgD1qxiHm6qb9YRJVgq2o5z3S7dNPsPnDF/jNg==
+
 react-native-splash-screen@^3.3.0:
   version "3.3.0"
   resolved "https://registry.npmjs.org/react-native-splash-screen/-/react-native-splash-screen-3.3.0.tgz"
@@ -5229,7 +5244,7 @@ react-native-webview@^13.10.3:
     escape-string-regexp "2.0.0"
     invariant "2.2.4"
 
-react-native@*, "react-native@^0.0.0-0 || >=0.60 <1.0", react-native@>=0.33, react-native@>=0.57, react-native@>=0.57.0, react-native@>=0.58.4, react-native@>=0.60.0, react-native@>=0.63.3, react-native@>=0.70.0, react-native@>=0.71.0, react-native@0.73.6:
+react-native@*, "react-native@^0.0.0-0 || >=0.60 <1.0", react-native@>=0.33, react-native@>=0.50.1, react-native@>=0.57, react-native@>=0.57.0, react-native@>=0.58.4, react-native@>=0.60.0, react-native@>=0.63.3, react-native@>=0.70.0, react-native@>=0.71.0, react-native@0.73.6:
   version "0.73.6"
   resolved "https://registry.npmjs.org/react-native/-/react-native-0.73.6.tgz"
   integrity sha512-oqmZe8D2/VolIzSPZw+oUd6j/bEmeRHwsLn1xLA5wllEYsZ5zNuMsDus235ONOnCRwexqof/J3aztyQswSmiaA==
@@ -5299,7 +5314,7 @@ react-shallow-renderer@^16.15.0:
     object-assign "^4.1.1"
     react-is "^16.12.0 || ^17.0.0 || ^18.0.0"
 
-react@*, "react@^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0", "react@^17 || ^18", react@^18.0, react@^18.2.0, react@>=16.0, react@>=16.6.3, react@>=16.8, react@>=17.0.0, react@>=18.1.0, react@18.2.0:
+react@*, "react@^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0", "react@^17 || ^18", react@^18.0, react@^18.2.0, react@>=0.14.8, react@>=16, react@>=16.0, react@>=16.6.3, react@>=16.8, react@>=17.0.0, react@>=18.1.0, react@18.2.0:
   version "18.2.0"
   resolved "https://registry.npmjs.org/react/-/react-18.2.0.tgz"
   integrity sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==
@@ -5520,6 +5535,7 @@ safe-buffer@~5.2.0:
     jotai "^2.6.0"
     react-native-axios "^0.17.1"
     react-native-config "1.5.0"
+    react-native-drop-shadow "^1.0.0"
     react-native-fast-image "^8.6.3"
     react-native-fbsdk-next "^13.0.0"
     react-native-loader-kit "^2.0.8"
@@ -5531,6 +5547,7 @@ safe-buffer@~5.2.0:
     react-native-screens "3.29.0"
     react-native-share "^11.0.3"
     react-native-simple-toast "^3.3.1"
+    react-native-skeleton-placeholder "^5.2.4"
     react-native-splash-screen "^3.3.0"
     react-native-vector-icons "^10.2.0"
     react-native-webview "^13.10.3"

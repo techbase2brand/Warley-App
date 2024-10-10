@@ -14,7 +14,7 @@ import AddAddressModal from '../components/Modal/AddAddressModal';
 import { removeFromWishlist } from '../redux/actions/wishListActions';
 import { useDispatch, useSelector } from 'react-redux';
 import { logEvent } from '@amplitude/analytics-react-native';
-import { BACKGROUND_IMAGE } from '../assests/images';
+import { BACKGROUND_IMAGE,ADD_TO_CART_IMG } from '../assests/images';
 import { STOREFRONT_DOMAIN, ADMINAPI_ACCESS_TOKEN } from '../constants/Constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart } from '../context/Cart';
@@ -156,14 +156,21 @@ const UserDashboardScreen = () => {
     logEvent('Chat button clicked in userDashboard Screen');
     navigation.navigate("ShopifyInboxScreen")
   };
-
+  const trimcateText = (text) => {
+    const words = text.split(' ');
+    if (words.length > 2) {
+      return words.slice(0, 2).join(' ') + '...';
+    }
+    return text;
+  };
   return (
     <KeyboardAvoidingView
       style={[flex]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ImageBackground style={[styles.container, flex, { backgroundColor: colors.whiteColor }]} source={isDarkMode ? '' : BACKGROUND_IMAGE}>
-        <Header backIcon={true} text={route.params?.from} navigation={navigation} />
+        <Header backIcon={true} textinput={true}   text={route.params?.from} navigation={navigation} />
+        <View style={{ width: "100%", height: 5, backgroundColor: whiteColor }}></View>
         {
           route.params?.from === ORDERS &&
           (ordersList && ordersList.length > 0 ?
@@ -172,13 +179,11 @@ const UserDashboardScreen = () => {
                 data={ordersList}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => {
-
                   return (
                     <View style={{ padding: spacings.large }}>
                       {/* <Text style={styles.itemText}>Order ID: {item.id}</Text>
                     <Text style={styles.itemText}>Order Total: {item.total ? item.total : item.total_price}</Text> */}
                       {item?.line_items?.map((Item, index) => {
-
                         return (
                           <View key={index} style={{ marginVertical: 10, padding: spacings.large, borderWidth: 1, width: "100%", borderRadius: 10 }}>
                             <View style={[flexDirectionRow]}>
@@ -266,8 +271,6 @@ const UserDashboardScreen = () => {
                 keyExtractor={(item) => item?.id?.toString()}
                 numColumns={2}
                 renderItem={({ item, index }) => {
-                  // console.log(item)
-                  // const imageUrl = item?.images?.edges?.[0]?.node?.url ?? item?.images?.nodes?.[0]?.url ?? item?.images?.[0]?.src;
                   const imageUrl = item?.images?.edges ? item?.images?.edges?.[0]?.node?.url : item?.images?.nodes ? item?.images?.nodes?.[0]?.url : item?.images?.[0]?.src ? item?.images?.[0]?.src : item.imageUrls[0]
                   const itemPrice = item?.variants?.edges?.[0]?.node?.price?.amount ?? item?.variants?.nodes?.[0]?.price ?? item?.variants?.[0]?.price;
                   const itemCurrencyCode = item?.variants?.edges?.[0]?.node?.price?.currencyCode ?? null;
@@ -275,7 +278,7 @@ const UserDashboardScreen = () => {
                   const variantId = item?.variants?.edges ? item?.variants.edges[0]?.node.id : item?.variants?.nodes ? item?.variants?.nodes[0]?.id : item?.variants?.[0]?.admin_graphql_api_id ? item?.variants[0]?.admin_graphql_api_id : item.variantId[0];
                   return (
                     <View style={[styles.itemContainer, { backgroundColor: isDarkMode ? grayColor : whiteColor }]}>
-                      <Pressable style={[positionAbsolute, alignJustifyCenter, styles.favButton]} onPress={() => handlePress(item)}>
+                      <Pressable style={[positionAbsolute, styles.favButton]} onPress={() => handlePress(item)}>
                         <AntDesign
                           name={"heart"}
                           size={20}
@@ -286,11 +289,35 @@ const UserDashboardScreen = () => {
                         source={{ uri: imageUrl }}
                         style={[styles.productImage, resizeModeContain]}
                       />
-                      <View style={{ width: "100%", height: hp(7), alignItems: "center", justifyContent: "center" }}>
-                        <Text style={[styles.wishListItemName, textAlign, { color: colors.blackColor }]}>{item?.title}</Text>
-                        <Text style={[styles.wishListItemPrice, textAlign, { color: colors.blackColor }]}>{item.price?.[0] ? item.price?.[0] : itemPrice} <Text style={[styles.wishListItemPrice]}>{itemCurrencyCode ? itemCurrencyCode : shopCurrency}</Text></Text>
+                      <View style={{ width: "100%", height: hp(7), justifyContent: "center", marginTop:15 }}>
+                        <Text style={[styles.wishListItemName, { color: colors.blackColor }]}>{trimcateText(item?.title)}</Text>
+                        <Text style={[styles.wishListItemName, { color: colors.blackColor, fontWeight:"300"}]}>1 Product</Text>
+                        <View style={{flexDirection:"row", justifyContent:"space-between", alignItems:"center"}}>
+                          <View>
+                        <Text style={[styles.wishListItemPrice, { color: colors.blackColor }]}>{item.price?.[0] ? item.price?.[0] : itemPrice} <Text style={[styles.wishListItemPrice]}>{itemCurrencyCode ? itemCurrencyCode : shopCurrency}</Text></Text>
+                     </View>
+                        <View style={[{  flexDirection: "row" , justifyContent:"space-between" }]}>
+                        {inventoryQuantity <= 0 ? <Pressable
+                          style={[styles.addtocartButton, borderRadius10, alignJustifyCenter]}
+                        >
+                          <Text style={styles.addToCartButtonText}>Out of stock</Text>
+                        </Pressable>
+                          : <Pressable
+                            // style={[styles.addtocartButton]}
+                            onPress={() => addToCartProduct(item, 1)}
+                          >
+                            {loadingProductId === variantId ? <ActivityIndicator size="small" color={whiteColor} /> :
+                            <Image
+                            source= {ADD_TO_CART_IMG}
+                            style={{height: 35 , width:35,resizeMode:"contain", position:"absolute", right:-9, bottom:-25}}
+                          />
+                              // <Text style={styles.addToCartButtonText}>Add To Cart</Text>
+                              }
+                          </Pressable>}
                       </View>
-                      <View style={[{ width: "100%", flexDirection: "row", paddingTop: spacings.large }, alignJustifyCenter]}>
+                        </View>
+                      </View>
+                      {/* <View style={[{ width: "100%", flexDirection: "row", paddingTop: spacings.large }, alignJustifyCenter]}>
                         {inventoryQuantity <= 0 ? <Pressable
                           style={[styles.addtocartButton, borderRadius10, alignJustifyCenter]}
                         >
@@ -303,7 +330,7 @@ const UserDashboardScreen = () => {
                             {loadingProductId === variantId ? <ActivityIndicator size="small" color={whiteColor} /> :
                               <Text style={styles.addToCartButtonText}>Add To Cart</Text>}
                           </Pressable>}
-                      </View>
+                      </View> */}
                     </View>
                   );
                 }}
@@ -402,7 +429,7 @@ const UserDashboardScreen = () => {
         }
         {modalVisible && <AddAddressModal visible={modalVisible} onClose={() => setModalVisible(false)} />}
         {isModalVisible && <AddReviewModal visible={isModalVisible} onClose={() => setIsModalVisible(false)} productId={productId} customerName={customerName} />}
-        <ChatButton onPress={handleChatButtonPress} />
+        {/* <ChatButton onPress={handleChatButtonPress} /> */}
       </ImageBackground>
     </KeyboardAvoidingView>
   );
@@ -420,9 +447,10 @@ const styles = StyleSheet.create({
     padding: spacings.large,
   },
   itemContainer: {
-    padding: spacings.large,
-    margin: spacings.large,
-    width: wp(43),
+    paddingHorizontal: spacings.large,
+    paddingBottom:15,
+    margin: 5,
+    width: wp(45),
     borderColor: 'transparent',
     backgroundColor: whiteColor,
     borderWidth: .1,
@@ -434,7 +462,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 10,
-
     elevation: 1.5,
   },
   itemText: {
@@ -497,7 +524,7 @@ const styles = StyleSheet.create({
     width: wp(8),
     height: wp(8),
     right: 2,
-    top: 2,
+    top: 110,
     zIndex: 10,
     // backgroundColor:whiteColor,
     borderRadius: 5
@@ -516,9 +543,10 @@ const styles = StyleSheet.create({
   addtocartButton: {
     fontSize: style.fontSizeExtraExtraSmall.fontSize,
     // marginVertical: spacings.large,
-    width: "68%",
+    // width: "68%",
     backgroundColor: redColor,
     padding: spacings.normal,
+    
     // paddingHorizontal: spacings.large
 
   },

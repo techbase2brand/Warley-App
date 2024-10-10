@@ -15,7 +15,7 @@ import { ProductVariant, ShopifyProduct } from '../@types';
 import ErrorBoundary from './ErrorBoundary';
 import { CheckoutException } from '@shopify/checkout-sheet-kit';
 import { whiteColor, grayColor, redColor } from '../src/constants/Color';
-import { PROFILE_ICON, HOME_ICON, SHOPPINGCART_ICON, SELECTEDBAR_ICON, HEART_ICON } from '../src/assests/images';
+import { PROFILE_ICON, HOME_ICON, SHOPPINGCART_ICON, SELECTEDBAR_ICON, HEART_ICON, ICON_ADDCART } from '../src/assests/images';
 import { MY_WISHLIST, HOME, FASHION, CLOTHING, FOOD, DRINKS, BEAUTY, ELECTRONICS, getStoreDomain, getStoreFrontAccessToken, STOREFRONT_DOMAIN, STOREFRONT_ACCESS_TOKEN, ADMINAPI_ACCESS_TOKEN } from '../src/constants/Constants';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp, } from '../src/utils';
 import SearchScreen from './screens/SearchScreen';
@@ -260,6 +260,8 @@ function HomeStack() {
           headerShown: false,
         })}
       />
+      <Stack.Screen name="ForgetPasswordScreen" component={ForgetPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WebViewScreen" component={WebviewScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -364,6 +366,8 @@ function HomeWithAuthStack() {
           headerShown: false,
         })}
       />
+      <Stack.Screen name="ForgetPasswordScreen" component={ForgetPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WebViewScreen" component={WebviewScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -420,6 +424,8 @@ function WishListStack() {
           headerShown: false,
         })}
       />
+      <Stack.Screen name="ForgetPasswordScreen" component={ForgetPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WebViewScreen" component={WebviewScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -497,7 +503,8 @@ function CatalogStack() {
           headerShown: false,
         })}
       />
-
+      <Stack.Screen name="ForgetPasswordScreen" component={ForgetPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WebViewScreen" component={WebviewScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -569,6 +576,30 @@ function ProfileStack() {
     </Stack.Navigator>
   );
 }
+
+function CartStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerBackTitleVisible: true,
+        // headerRight: CartIcon,
+      }}
+    >
+      <Stack.Screen
+        name="CartModal"
+        component={CartScreen}
+        options={{
+          title: 'Cart',
+          headerShown: false,
+          presentation: 'modal',
+          headerRight: undefined,
+        }}
+      />
+      <Stack.Screen name="ForgetPasswordScreen" component={ForgetPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WebViewScreen" component={WebviewScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  );
+}
 function CartIcon() {
   const theme = useTheme();
   return (
@@ -582,6 +613,7 @@ function AppWithNavigation({ route }: { route: any }) {
   const colors = isDarkMode ? darkColors : lightColors;
   const { isLoggedIn } = useContext(AuthContext)
   const userLoggedIn = useSelector(state => state.auth.isAuthenticated);
+  const { totalQuantity } = useCart();
   // console.log("userLoggedInFromRedux::::::::::::::::::", userLoggedIn)
   return (
     <Tab.Navigator
@@ -599,10 +631,10 @@ function AppWithNavigation({ route }: { route: any }) {
         component={isLoggedIn || userLoggedIn ? HomeStack : HomeWithAuthStack}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
-          // console.log(routeName)
+          console.log(routeName)
           return {
             headerShown: false,
-            tabBarStyle: { display: routeName === 'Search' || routeName === "AuthStack" || routeName === 'ShopifyCheckOut' ? 'none' : 'flex', backgroundColor: colors.whiteColor },
+            tabBarStyle: { display: routeName === 'Search' || routeName === "AuthStack" || routeName === 'CartModal' || routeName === 'ShopifyCheckOut' ? 'none' : 'flex', backgroundColor: colors.whiteColor },
             tabBarIcon: ({ focused }) => (
               <View style={{ alignItems: "center", justifyContent: "center" }}>
                 <View style={{ height: 10, width: 50, alignItems: "center", justifyContent: "center" }}>
@@ -676,7 +708,7 @@ function AppWithNavigation({ route }: { route: any }) {
           }
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Profile"
         component={isLoggedIn || userLoggedIn ? ProfileStack : AuthStack}
         options={{
@@ -694,6 +726,50 @@ function AppWithNavigation({ route }: { route: any }) {
               </View>
               <Image
                 source={PROFILE_ICON}
+                style={{ width: 24, height: 24, resizeMode: "contain", tintColor: focused ? redColor : isDarkMode ? whiteColor : grayColor }}
+              />
+            </View>
+          ),
+        }}
+      /> */}
+      <Tab.Screen
+        name="Cart"
+        component={CartStack}
+        options={{
+          tabBarStyle: { display: isLoggedIn || userLoggedIn ? 'flex' : 'none', backgroundColor: colors.whiteColor },
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <View style={{ height: 10, width: 50, alignItems: "center", justifyContent: "center" }}>
+                {/* {totalQuantity > 0 && (
+                  <View style={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 10,
+                    backgroundColor: redColor,
+                    borderRadius: wp(2),
+                    width: wp(4),
+                    height: wp(4),
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999
+                  }}>
+                    <Text style={{
+                      color: whiteColor,
+                      fontSize: wp(2.5),
+                      fontWeight: 'bold',
+                    }}>{totalQuantity}</Text>
+                  </View>
+                )} */}
+                {focused && (
+                  <Image
+                    source={ICON_ADDCART}
+                    style={{ position: 'absolute', top: 1, width: 50, height: 8, tintColor: redColor, resizeMode: "contain" }}
+                  />
+                )}
+              </View>
+              <Image
+                source={ICON_ADDCART}
                 style={{ width: 24, height: 24, resizeMode: "contain", tintColor: focused ? redColor : isDarkMode ? whiteColor : grayColor }}
               />
             </View>
